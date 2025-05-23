@@ -1,0 +1,1046 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Double.P Collections POS System</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        /* Custom styles for the message modal */
+        .message-modal {
+            display: none; /* Hidden by default */
+            position: fixed; /* Stay in place */
+            z-index: 100; /* Sit on top */
+            left: 0;
+            top: 0;
+            width: 100%; /* Full width */
+            height: 100%; /* Full height */
+            overflow: auto; /* Enable scroll if needed */
+            background-color: rgba(0,0,0,0.4); /* Black w/ opacity */
+            justify-content: center;
+            align-items: center;
+        }
+        .message-modal-content {
+            background-color: #fefefe;
+            margin: auto;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            width: 80%;
+            max-width: 400px;
+            text-align: center;
+            position: relative;
+        }
+        .message-modal-close {
+            color: #aaa;
+            position: absolute;
+            top: 10px;
+            right: 15px;
+            font-size: 28px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+        .message-modal-close:hover,
+        .message-modal-close:focus {
+            color: black;
+            text-decoration: none;
+            cursor: pointer;
+        }
+
+        /* Print-specific styles */
+        @media print {
+            body {
+                visibility: hidden; /* Hide the entire body by default for print */
+                margin: 0 !important;
+                padding: 0 !important;
+            }
+            #receiptModal {
+                visibility: visible; /* Make the modal visible for print */
+                position: absolute !important; /* Use absolute to take it out of flow */
+                left: 0 !important;
+                top: 0 !important;
+                width: 100% !important; /* Take full width for printing */
+                height: auto !important; /* Adjust height based on content */
+                background-color: white !important; /* Ensure white background */
+                box-shadow: none !important;
+                margin: 0 !important;
+                padding: 0 !important;
+                overflow: visible !important;
+                display: block !important; /* Ensure it's block level */
+                transform: none !important; /* Remove any transforms */
+                opacity: 1 !important; /* Ensure full opacity */
+            }
+            #receiptModal .bg-white { /* Target the inner content div */
+                width: 100% !important;
+                max-width: 80mm !important; /* Set a common thermal printer width */
+                margin: 0 auto !important; /* Center the receipt on the page */
+                box-shadow: none !important;
+                border-radius: 0 !important;
+                padding: 10px !important; /* Reduce padding for compactness */
+                font-size: 10pt !important; /* Smaller font for receipt printing */
+                line-height: 1.2 !important; /* Adjust line height */
+            }
+            #receiptModal h2, #receiptModal h3 {
+                font-size: 14pt !important; /* Adjust heading sizes */
+                margin-bottom: 5px !important;
+            }
+            #receiptModal p, #receiptModal span, #receiptModal div {
+                font-size: 9pt !important; /* Adjust general text size */
+            }
+            #receiptModal button { /* Hide buttons on the receipt for print */
+                display: none !important;
+            }
+            /* Explicitly make content inside the modal visible */
+            #receiptModal * {
+                visibility: visible !important;
+            }
+        }
+    </style>
+</head>
+<body class="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-4 text-gray-800 flex items-center justify-center">
+
+    <div class="w-full max-w-6xl bg-white rounded-xl shadow-2xl p-6 md:p-8 relative">
+        <h1 class="text-4xl md:text-5xl font-extrabold text-center text-indigo-700 mb-8 tracking-tight">
+            Double.P Collections POS
+        </h1>
+
+        <div class="text-center text-sm text-gray-600 mb-4">
+            Mode: <span id="userIdDisplay" class="font-semibold text-purple-700">Local Browser Storage</span>
+        </div>
+
+        <div class="mb-8 p-6 bg-purple-50 rounded-lg shadow-inner">
+            <h2 class="text-2xl font-semibold text-purple-700 mb-4">Inventory Management</h2>
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-4 items-end mb-6">
+                <div class="md:col-span-2">
+                    <label for="newProductName" class="block text-sm font-medium text-gray-700 mb-1">Product Name</label>
+                    <input
+                        type="text"
+                        id="newProductName"
+                        placeholder="e.g., Jeans"
+                        class="w-full p-3 border border-purple-300 rounded-md focus:ring-2 focus:ring-purple-500 focus:border-transparent transition duration-200"
+                    />
+                </div>
+                <div>
+                    <label for="newProductPrice" class="block text-sm font-medium text-gray-700 mb-1">Price (KES)</label>
+                    <input
+                        type="number"
+                        id="newProductPrice"
+                        placeholder="0.00"
+                        class="w-full p-3 border border-purple-300 rounded-md focus:ring-2 focus:ring-purple-500 focus:border-transparent transition duration-200"
+                    />
+                </div>
+                <div>
+                    <label for="newProductStock" class="block text-sm font-medium text-gray-700 mb-1">Stock</label>
+                    <input
+                        type="number"
+                        id="newProductStock"
+                        min="0"
+                        placeholder="0"
+                        class="w-full p-3 border border-purple-300 rounded-md focus:ring-2 focus:ring-purple-500 focus:border-transparent transition duration-200"
+                    />
+                </div>
+                <button
+                    id="addProductToInventoryBtn"
+                    class="md:col-span-4 lg:col-span-1 bg-purple-600 text-white py-3 px-6 rounded-md hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 transition duration-300 transform hover:scale-105 shadow-md"
+                >
+                    Add Product to Inventory
+                </button>
+            </div>
+
+            <div id="inventoryTableContainer" class="overflow-x-auto">
+                <p class="text-gray-500 italic">No products in inventory yet.</p>
+            </div>
+        </div>
+
+        <div class="mb-8 p-6 bg-indigo-50 rounded-lg shadow-inner">
+            <h2 class="text-2xl font-semibold text-indigo-600 mb-4">Add Item to Cart</h2>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
+                <div class="md:col-span-2 relative">
+                    <label for="searchItem" class="block text-sm font-medium text-gray-700 mb-1">Search Product</label>
+                    <input
+                        type="text"
+                        id="searchItem"
+                        placeholder="Search by name..."
+                        class="w-full p-3 border border-indigo-300 rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition duration-200"
+                    />
+                    <ul id="searchResults" class="absolute z-10 w-full bg-white border border-gray-200 rounded-md shadow-lg mt-1 max-h-48 overflow-y-auto hidden">
+                        </ul>
+                </div>
+                <div>
+                    <label for="itemQuantityToAdd" class="block text-sm font-medium text-gray-700 mb-1">Quantity</label>
+                    <input
+                        type="number"
+                        id="itemQuantityToAdd"
+                        min="1"
+                        value="1"
+                        disabled
+                        class="w-full p-3 border border-indigo-300 rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition duration-200 disabled:bg-gray-100 disabled:cursor-not-allowed"
+                    />
+                </div>
+                <div class="md:col-span-3">
+                    <p id="selectedItemDisplay" class="text-sm text-gray-600 mb-2 hidden">
+                        </p>
+                    <button
+                        id="addItemToCartBtn"
+                        disabled
+                        class="w-full bg-indigo-600 text-white py-3 px-6 rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 transition duration-300 transform hover:scale-105 shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                        Add to Cart
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <div class="mb-8 p-6 bg-gray-50 rounded-lg shadow-inner">
+            <h2 class="text-2xl font-semibold text-gray-700 mb-4">Cart Items</h2>
+            <div id="cartTableContainer" class="overflow-x-auto">
+                <p class="text-gray-500 italic">No items in cart yet.</p>
+            </div>
+        </div>
+
+        <div class="p-6 bg-blue-50 rounded-lg shadow-inner">
+            <h2 class="text-2xl font-semibold text-blue-700 mb-4">Order Summary</h2>
+            <div class="flex justify-between items-center mb-2">
+                <span class="text-lg font-medium text-gray-700">Subtotal:</span>
+                <span id="subtotalDisplay" class="text-lg font-bold text-gray-900">KES 0.00</span>
+            </div>
+            <div class="flex justify-between items-center mb-4">
+                <label for="discount" class="text-lg font-medium text-gray-700">Discount (%):</label>
+                <input
+                    type="number"
+                    id="discount"
+                    min="0"
+                    max="100"
+                    value="0"
+                    class="w-24 p-2 border border-blue-300 rounded-md text-lg focus:ring-2 focus:ring-blue-500"
+                />
+                <span id="discountAmountDisplay" class="text-lg font-bold text-red-600">(-KES 0.00)</span>
+            </div>
+            <div class="flex justify-between items-center border-t-2 border-blue-200 pt-4 mt-4">
+                <span class="text-xl font-semibold text-blue-800">Total:</span>
+                <span id="totalDisplay" class="text-2xl font-extrabold text-blue-900">KES 0.00</span>
+            </div>
+
+            <div class="mt-6 p-4 bg-blue-100 rounded-lg">
+                <h3 class="text-xl font-semibold text-blue-700 mb-3">Payment Method</h3>
+                <div class="flex flex-wrap gap-4 mb-4">
+                    <label class="inline-flex items-center">
+                        <input type="radio" name="paymentMethod" value="Cash" class="form-radio text-indigo-600" checked>
+                        <span class="ml-2 text-gray-700">Cash</span>
+                    </label>
+                    <label class="inline-flex items-center">
+                        <input type="radio" name="paymentMethod" value="M-Pesa" class="form-radio text-indigo-600">
+                        <span class="ml-2 text-gray-700">M-Pesa</span>
+                    </label>
+                    <label class="inline-flex items-center">
+                        <input type="radio" name="paymentMethod" value="Card" class="form-radio text-indigo-600">
+                        <span class="ml-2 text-gray-700">Card</span>
+                    </label>
+                </div>
+
+                <div id="cashPaymentDetails" class="mb-4">
+                    <label for="amountTendered" class="block text-sm font-medium text-gray-700 mb-1">Amount Tendered (KES)</label>
+                    <input
+                        type="number"
+                        id="amountTendered"
+                        placeholder="0.00"
+                        class="w-full p-3 border border-blue-300 rounded-md focus:ring-2 focus:ring-blue-500 transition duration-200"
+                    />
+                    <p class="text-sm text-gray-600 mt-2">Change Due: <span id="changeDueDisplay" class="font-bold">KES 0.00</span></p>
+                </div>
+            </div>
+
+            <div class="mt-6">
+                <label for="buyerName" class="block text-sm font-medium text-gray-700 mb-1">Buyer's Name</label>
+                <input
+                    type="text"
+                    id="buyerName"
+                    placeholder="Enter buyer's name for receipt"
+                    class="w-full p-3 border border-blue-300 rounded-md focus:ring-2 focus:ring-blue-500 transition duration-200 mb-4"
+                />
+                <button
+                    id="checkoutBtn"
+                    class="w-full bg-green-600 text-white py-4 px-6 rounded-md text-xl font-bold hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 transition duration-300 transform hover:scale-105 shadow-lg"
+                >
+                    Checkout & Print Receipt
+                </button>
+            </div>
+        </div>
+
+        <div id="receiptModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50 hidden">
+            <div class="bg-white rounded-xl shadow-2xl p-8 max-w-md w-full relative transform transition-all duration-300 scale-100 opacity-100">
+                <button id="closeReceiptBtn" class="absolute top-4 right-4 text-gray-500 hover:text-gray-700 text-2xl font-bold">
+                    &times;
+                </button>
+                <h2 class="text-3xl font-extrabold text-center text-indigo-700 mb-6">Receipt</h2>
+                <div class="text-gray-700 mb-4 border-b pb-4 border-gray-200">
+                    <p class="text-lg font-semibold">Double.P Collections</p>
+                    <p class="text-sm">Your trusted fashion partner.</p>
+                    <p id="receiptDateTime" class="mt-2 text-sm"></p>
+                    <p id="receiptBuyerName" class="text-sm"></p>
+                </div>
+
+                <div class="mb-6">
+                    <h3 class="text-xl font-semibold text-gray-800 mb-3">Items Purchased:</h3>
+                    <div id="receiptItems" class="text-sm">
+                        </div>
+                </div>
+
+                <div class="border-t pt-4 border-gray-200 text-gray-800">
+                    <div class="flex justify-between text-lg mb-1">
+                        <span>Subtotal:</span>
+                        <span id="receiptSubtotal" class="font-bold"></span>
+                    </div>
+                    <div class="flex justify-between text-lg mb-1">
+                        <span>Discount (<span id="receiptDiscountPercentage"></span>%):</span>
+                        <span id="receiptDiscountAmount" class="font-bold text-red-600"></span>
+                    </div>
+                    <div class="flex justify-between text-xl font-bold text-indigo-800 mt-2">
+                        <span>Total Paid:</span>
+                        <span id="receiptTotal" class="font-extrabold"></span>
+                    </div>
+                    <div class="flex justify-between text-lg mt-2">
+                        <span>Payment Method:</span>
+                        <span id="receiptPaymentMethod" class="font-medium"></span>
+                    </div>
+                    <div id="receiptChangeDueContainer" class="flex justify-between text-lg mt-1 hidden">
+                        <span>Change Due:</span>
+                        <span id="receiptChangeDue" class="font-bold"></span>
+                    </div>
+                </div>
+
+                <p class="text-center text-sm text-gray-500 mt-6">Thank you for your purchase!</p>
+
+                <button
+                    id="printReceiptBtn"
+                    class="mt-6 w-full bg-blue-600 text-white py-3 px-6 rounded-md text-lg font-bold hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition duration-300 transform hover:scale-105 shadow-md"
+                >
+                    Print Receipt
+                </button>
+            </div>
+        </div>
+
+        <div id="messageModal" class="message-modal">
+            <div class="message-modal-content">
+                <span class="message-modal-close" id="closeMessageModal">&times;</span>
+                <p id="messageModalText" class="text-lg text-gray-800"></p>
+                <button id="messageModalOkBtn" class="mt-4 bg-indigo-600 text-white py-2 px-4 rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition duration-300">OK</button>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        // Global state variables
+        let inventory = [];
+        let cartItems = [];
+        let selectedItem = null;
+        let nextCartItemId = 1;
+        let discountPercentage = 0;
+        let selectedPaymentMethod = 'Cash';
+        let amountTendered = 0;
+        let changeDue = 0;
+
+        // DOM Elements
+        const newProductNameInput = document.getElementById('newProductName');
+        const newProductPriceInput = document.getElementById('newProductPrice');
+        const newProductStockInput = document.getElementById('newProductStock');
+        const addProductToInventoryBtn = document.getElementById('addProductToInventoryBtn');
+        const inventoryTableContainer = document.getElementById('inventoryTableContainer');
+        // const userIdDisplay = document.getElementById('userIdDisplay'); // No longer needed for user ID
+
+        const searchItemInput = document.getElementById('searchItem');
+        const searchResultsList = document.getElementById('searchResults');
+        const itemQuantityToAddInput = document.getElementById('itemQuantityToAdd');
+        const selectedItemDisplay = document.getElementById('selectedItemDisplay');
+        const addItemToCartBtn = document.getElementById('addItemToCartBtn');
+        const cartTableContainer = document.getElementById('cartTableContainer');
+
+        const subtotalDisplay = document.getElementById('subtotalDisplay');
+        const discountInput = document.getElementById('discount');
+        const discountAmountDisplay = document.getElementById('discountAmountDisplay');
+        const totalDisplay = document.getElementById('totalDisplay');
+        const buyerNameInput = document.getElementById('buyerName');
+        const checkoutBtn = document.getElementById('checkoutBtn');
+
+        const paymentMethodRadios = document.querySelectorAll('input[name="paymentMethod"]');
+        const cashPaymentDetails = document.getElementById('cashPaymentDetails');
+        const amountTenderedInput = document.getElementById('amountTendered');
+        const changeDueDisplay = document.getElementById('changeDueDisplay');
+
+        const receiptModal = document.getElementById('receiptModal');
+        const closeReceiptBtn = document.getElementById('closeReceiptBtn');
+        const printReceiptBtn = document.getElementById('printReceiptBtn');
+        const receiptDateTime = document.getElementById('receiptDateTime');
+        const receiptBuyerName = document.getElementById('receiptBuyerName');
+        const receiptItemsDiv = document.getElementById('receiptItems');
+        const receiptSubtotal = document.getElementById('receiptSubtotal');
+        const receiptDiscountPercentage = document.getElementById('receiptDiscountPercentage');
+        const receiptDiscountAmount = document.getElementById('receiptDiscountAmount');
+        const receiptTotal = document.getElementById('receiptTotal');
+        const receiptPaymentMethod = document.getElementById('receiptPaymentMethod');
+        const receiptChangeDueContainer = document.getElementById('receiptChangeDueContainer');
+        const receiptChangeDue = document.getElementById('receiptChangeDue');
+
+        const messageModal = document.getElementById('messageModal');
+        const messageModalText = document.getElementById('messageModalText');
+        const closeMessageModalBtn = document.getElementById('closeMessageModal');
+        const messageModalOkBtn = document.getElementById('messageModalOkBtn');
+
+        // --- Utility Functions ---
+
+        function formatCurrency(amount) {
+            return new Intl.NumberFormat('en-KE', {
+                style: 'currency',
+                currency: 'KES',
+                minimumFractionDigits: 2,
+            }).format(amount);
+        }
+
+        function showAlert(message) {
+            messageModalText.textContent = message;
+            messageModal.style.display = 'flex';
+        }
+
+        function hideAlert() {
+            messageModal.style.display = 'none';
+        }
+
+        // --- Local Storage Functions ---
+
+        function saveDataToLocalStorage() {
+            try {
+                localStorage.setItem('posInventory', JSON.stringify(inventory));
+                localStorage.setItem('posCartItems', JSON.stringify(cartItems));
+                localStorage.setItem('posNextCartItemId', nextCartItemId);
+                console.log("Data saved to local storage.");
+            } catch (e) {
+                console.error("Error saving to local storage:", e);
+                showAlert("Error saving data. Please check your browser's storage limits.");
+            }
+        }
+
+        function loadDataFromLocalStorage() {
+            try {
+                const storedInventory = localStorage.getItem('posInventory');
+                const storedCartItems = localStorage.getItem('posCartItems');
+                const storedNextCartItemId = localStorage.getItem('posNextCartItemId');
+
+                if (storedInventory) {
+                    inventory = JSON.parse(storedInventory);
+                    // Ensure inventory items have an 'id' for tracking
+                    inventory.forEach(item => {
+                        if (!item.id) item.id = crypto.randomUUID(); // Add UUID if missing
+                    });
+                    inventory.sort((a, b) => a.name.localeCompare(b.name));
+                } else {
+                    inventory = [];
+                }
+
+                if (storedCartItems) {
+                    cartItems = JSON.parse(storedCartItems);
+                } else {
+                    cartItems = [];
+                }
+
+                if (storedNextCartItemId) {
+                    nextCartItemId = parseInt(storedNextCartItemId);
+                } else {
+                    nextCartItemId = 1;
+                }
+
+                console.log("Data loaded from local storage.");
+                renderInventoryTable();
+                renderCartTable();
+                updateTotals();
+
+            } catch (e) {
+                console.error("Error loading from local storage:", e);
+                showAlert("Error loading previous data. Starting with empty tables.");
+                inventory = [];
+                cartItems = [];
+                nextCartItemId = 1;
+                renderInventoryTable();
+                renderCartTable();
+                updateTotals();
+            }
+        }
+
+        // --- Inventory Management Functions ---
+
+        function renderInventoryTable() {
+            if (inventory.length === 0) {
+                inventoryTableContainer.innerHTML = '<p class="text-gray-500 italic">No products in inventory yet.</p>';
+                return;
+            }
+
+            let tableHtml = `
+                <table class="min-w-full bg-white rounded-lg shadow-sm">
+                    <thead class="bg-gray-200">
+                        <tr>
+                            <th class="py-3 px-4 text-left text-sm font-medium text-gray-600 uppercase tracking-wider rounded-tl-lg">ID</th>
+                            <th class="py-3 px-4 text-left text-sm font-medium text-gray-600 uppercase tracking-wider">Product Name</th>
+                            <th class="py-3 px-4 text-left text-sm font-medium text-gray-600 uppercase tracking-wider">Price</th>
+                            <th class="py-3 px-4 text-left text-sm font-medium text-gray-600 uppercase tracking-wider">Stock</th>
+                            <th class="py-3 px-4 text-left text-sm font-medium text-gray-600 uppercase tracking-wider rounded-tr-lg">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+            `;
+
+            inventory.forEach(item => {
+                tableHtml += `
+                    <tr class="border-b border-gray-100 last:border-b-0 hover:bg-gray-50">
+                        <td class="py-3 px-4 text-sm text-gray-800">${item.id.substring(0, 8)}...</td>
+                        <td class="py-3 px-4 text-sm text-gray-800">
+                            <input
+                                type="text"
+                                value="${item.name}"
+                                data-id="${item.id}"
+                                data-field="name"
+                                class="w-32 p-2 border border-gray-300 rounded-md text-sm focus:ring-1 focus:ring-purple-400 inventory-edit-input"
+                            />
+                        </td>
+                        <td class="py-3 px-4 text-sm text-gray-800">
+                            <input
+                                type="number"
+                                value="${item.price}"
+                                data-id="${item.id}"
+                                data-field="price"
+                                class="w-24 p-2 border border-gray-300 rounded-md text-sm focus:ring-1 focus:ring-purple-400 inventory-edit-input"
+                            />
+                        </td>
+                        <td class="py-3 px-4 text-sm text-gray-800">
+                            <input
+                                type="number"
+                                value="${item.stock}"
+                                data-id="${item.id}"
+                                data-field="stock"
+                                class="w-20 p-2 border border-gray-300 rounded-md text-sm focus:ring-1 focus:ring-purple-400 inventory-edit-input"
+                            />
+                        </td>
+                        <td class="py-3 px-4">
+                            <button
+                                data-id="${item.id}"
+                                class="text-red-500 hover:text-red-700 transition duration-200 inventory-delete-btn"
+                            >
+                                Delete
+                            </button>
+                        </td>
+                    </tr>
+                `;
+            });
+
+            tableHtml += `</tbody></table>`;
+            inventoryTableContainer.innerHTML = tableHtml;
+
+            // Add event listeners to newly rendered inputs and buttons
+            document.querySelectorAll('.inventory-edit-input').forEach(input => {
+                input.addEventListener('change', handleEditInventoryItem);
+            });
+            document.querySelectorAll('.inventory-delete-btn').forEach(button => {
+                button.addEventListener('click', handleDeleteInventoryItem);
+            });
+        }
+
+        function handleAddProductToInventory() {
+            const name = newProductNameInput.value.trim();
+            const price = parseFloat(newProductPriceInput.value);
+            const stock = parseInt(newProductStockInput.value);
+
+            if (!name || isNaN(price) || price <= 0 || isNaN(stock) || stock < 0) {
+                showAlert('Please enter a valid product name, price, and stock.');
+                return;
+            }
+
+            const newProduct = {
+                id: crypto.randomUUID(), // Generate a unique ID for the product
+                name: name,
+                price: price,
+                stock: stock
+            };
+            inventory.push(newProduct);
+            inventory.sort((a, b) => a.name.localeCompare(b.name)); // Keep sorted
+            renderInventoryTable();
+            updateTotals(); // In case cart needs to reflect stock changes
+            saveDataToLocalStorage(); // Save changes
+
+            newProductNameInput.value = '';
+            newProductPriceInput.value = '';
+            newProductStockInput.value = '';
+        }
+
+        function handleEditInventoryItem(event) {
+            const id = event.target.dataset.id;
+            const field = event.target.dataset.field;
+            let value = event.target.value;
+
+            const itemToUpdate = inventory.find(item => item.id === id);
+            if (!itemToUpdate) return;
+
+            if (field === 'price' || field === 'stock') {
+                value = parseFloat(value);
+                if (isNaN(value) || value < 0) {
+                    showAlert(`Invalid ${field} value. Please enter a non-negative number.`);
+                    event.target.value = itemToUpdate[field]; // Revert to old value
+                    return;
+                }
+            }
+
+            itemToUpdate[field] = value;
+            renderInventoryTable(); // Re-render to reflect potential sort changes
+            updateTotals(); // Recalculate totals as prices might change
+            saveDataToLocalStorage(); // Save changes
+        }
+
+        function handleDeleteInventoryItem(event) {
+            const id = event.target.dataset.id;
+            inventory = inventory.filter(item => item.id !== id);
+
+            // Also remove from cart if it was there and return stock (conceptually)
+            cartItems = cartItems.filter(item => item.inventoryId !== id);
+
+            renderInventoryTable();
+            renderCartTable(); // Update cart display
+            updateTotals(); // Recalculate totals
+            saveDataToLocalStorage(); // Save changes
+        }
+
+        // --- Add Item to Cart Functions ---
+
+        function filterInventory() {
+            const searchTerm = searchItemInput.value.toLowerCase();
+            searchResultsList.innerHTML = '';
+            searchResultsList.classList.add('hidden');
+
+            if (searchTerm.length === 0) {
+                selectedItem = null;
+                selectedItemDisplay.classList.add('hidden');
+                itemQuantityToAddInput.disabled = true;
+                addItemToCartBtn.disabled = true;
+                return;
+            }
+
+            const filtered = inventory.filter(item =>
+                item.name.toLowerCase().includes(searchTerm) && item.stock > 0
+            );
+
+            if (filtered.length > 0) {
+                searchResultsList.classList.remove('hidden');
+                filtered.forEach(item => {
+                    const li = document.createElement('li');
+                    li.className = 'p-3 hover:bg-gray-100 cursor-pointer flex justify-between items-center';
+                    li.innerHTML = `<span>${item.name}</span><span class="text-gray-500 text-sm">Stock: ${item.stock}</span>`;
+                    li.addEventListener('click', () => handleSelectItemForCart(item));
+                    searchResultsList.appendChild(li);
+                });
+            }
+        }
+
+        function handleSelectItemForCart(item) {
+            selectedItem = item;
+            searchItemInput.value = item.name;
+            searchResultsList.classList.add('hidden');
+            itemQuantityToAddInput.value = 1;
+            itemQuantityToAddInput.disabled = false;
+            addItemToCartBtn.disabled = false;
+            selectedItemDisplay.textContent = `Selected: ${selectedItem.name} (Price: ${formatCurrency(selectedItem.price)}, Available Stock: ${selectedItem.stock})`;
+            selectedItemDisplay.classList.remove('hidden');
+        }
+
+        function handleAddItemToCart() {
+            if (!selectedItem) {
+                showAlert('Please select an item from the available products.');
+                return;
+            }
+            const quantityToAdd = parseInt(itemQuantityToAddInput.value);
+
+            if (isNaN(quantityToAdd) || quantityToAdd <= 0) {
+                showAlert('Please enter a valid quantity.');
+                return;
+            }
+
+            const existingCartItemIndex = cartItems.findIndex(item => item.inventoryId === selectedItem.id);
+
+            let newQuantityForCart = quantityToAdd;
+            if (existingCartItemIndex !== -1) {
+                newQuantityForCart += cartItems[existingCartItemIndex].quantity;
+            }
+
+            if (newQuantityForCart > selectedItem.stock) {
+                showAlert(`Insufficient stock for ${selectedItem.name}. Available: ${selectedItem.stock}`);
+                return;
+            }
+
+            // Update stock in local inventory
+            const inventoryItem = inventory.find(item => item.id === selectedItem.id);
+            if (inventoryItem) {
+                inventoryItem.stock -= quantityToAdd;
+            }
+
+            if (existingCartItemIndex !== -1) {
+                cartItems[existingCartItemIndex].quantity = newQuantityForCart;
+            } else {
+                const newItem = {
+                    id: nextCartItemId++, // Unique ID for the cart item itself
+                    inventoryId: selectedItem.id, // Reference to the inventory item's ID
+                    name: selectedItem.name,
+                    price: selectedItem.price,
+                    quantity: quantityToAdd,
+                };
+                cartItems.push(newItem);
+            }
+
+            renderCartTable();
+            renderInventoryTable(); // Re-render inventory to show updated stock
+            updateTotals();
+
+            // Reset selection and quantity for next item
+            selectedItem = null;
+            searchItemInput.value = '';
+            itemQuantityToAddInput.value = 1;
+            itemQuantityToAddInput.disabled = true;
+            addItemToCartBtn.disabled = true;
+            selectedItemDisplay.classList.add('hidden');
+            saveDataToLocalStorage(); // Save changes
+        }
+
+        // --- Cart Display Functions ---
+
+        function renderCartTable() {
+            if (cartItems.length === 0) {
+                cartTableContainer.innerHTML = '<p class="text-gray-500 italic">No items in cart yet.</p>';
+                return;
+            }
+
+            let tableHtml = `
+                <table class="min-w-full bg-white rounded-lg shadow-sm">
+                    <thead class="bg-gray-200">
+                        <tr>
+                            <th class="py-3 px-4 text-left text-sm font-medium text-gray-600 uppercase tracking-wider rounded-tl-lg">Code</th>
+                            <th class="py-3 px-4 text-left text-sm font-medium text-gray-600 uppercase tracking-wider">Item</th>
+                            <th class="py-3 px-4 text-left text-sm font-medium text-gray-600 uppercase tracking-wider">Price</th>
+                            <th class="py-3 px-4 text-left text-sm font-medium text-gray-600 uppercase tracking-wider">Quantity</th>
+                            <th class="py-3 px-4 text-left text-sm font-medium text-gray-600 uppercase tracking-wider">Total</th>
+                            <th class="py-3 px-4 text-left text-sm font-medium text-gray-600 uppercase tracking-wider rounded-tr-lg">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+            `;
+
+            cartItems.forEach(item => {
+                tableHtml += `
+                    <tr class="border-b border-gray-100 last:border-b-0 hover:bg-gray-50">
+                        <td class="py-3 px-4 text-sm text-gray-800">${item.inventoryId.substring(0, 8)}...</td>
+                        <td class="py-3 px-4 text-sm text-gray-800">${item.name}</td>
+                        <td class="py-3 px-4 text-sm text-gray-800">
+                            <input
+                                type="number"
+                                value="${item.price}"
+                                data-cart-id="${item.id}"
+                                data-field="price"
+                                class="w-24 p-2 border border-gray-300 rounded-md text-sm focus:ring-1 focus:ring-indigo-400 cart-edit-input"
+                            />
+                        </td>
+                        <td class="py-3 px-4 text-sm text-gray-800">
+                            <input
+                                type="number"
+                                min="0"
+                                value="${item.quantity}"
+                                data-cart-id="${item.id}"
+                                data-field="quantity"
+                                class="w-20 p-2 border border-gray-300 rounded-md text-sm focus:ring-1 focus:ring-indigo-400 cart-edit-input"
+                            />
+                        </td>
+                        <td class="py-3 px-4 text-sm text-gray-800">${formatCurrency(item.price * item.quantity)}</td>
+                        <td class="py-3 px-4">
+                            <button
+                                data-cart-id="${item.id}"
+                                class="text-red-500 hover:text-red-700 transition duration-200 cart-delete-btn"
+                            >
+                                Delete
+                            </button>
+                        </td>
+                    </tr>
+                `;
+            });
+
+            tableHtml += `</tbody></table>`;
+            cartTableContainer.innerHTML = tableHtml;
+
+            // Add event listeners to newly rendered inputs and buttons
+            document.querySelectorAll('.cart-edit-input').forEach(input => {
+                input.addEventListener('change', handleEditCartItem);
+            });
+            document.querySelectorAll('.cart-delete-btn').forEach(button => {
+                button.addEventListener('click', handleDeleteCartItem);
+            });
+        }
+
+        function handleEditCartItem(event) {
+            const cartId = parseInt(event.target.dataset.cartId);
+            const field = event.target.dataset.field;
+            let value = event.target.value;
+
+            const cartItemIndex = cartItems.findIndex(item => item.id === cartId);
+            if (cartItemIndex === -1) return;
+
+            const oldQuantity = cartItems[cartItemIndex].quantity;
+            const oldPrice = cartItems[cartItemIndex].price;
+
+            let newQuantity = oldQuantity;
+            let newPrice = oldPrice;
+
+            if (field === 'quantity') {
+                newQuantity = parseInt(value);
+                if (isNaN(newQuantity) || newQuantity < 0) {
+                    showAlert('Quantity cannot be negative. Reverting to previous value.');
+                    event.target.value = oldQuantity;
+                    return;
+                }
+            } else if (field === 'price') {
+                newPrice = parseFloat(value);
+                if (isNaN(newPrice) || newPrice < 0) {
+                    showAlert('Price cannot be negative. Reverting to previous value.');
+                    event.target.value = oldPrice;
+                    return;
+                }
+            }
+
+            const inventoryItem = inventory.find(inv => inv.id === cartItems[cartItemIndex].inventoryId);
+            if (inventoryItem) {
+                const stockDifference = newQuantity - oldQuantity;
+                if (inventoryItem.stock - stockDifference < 0) {
+                    showAlert(`Cannot update quantity. Not enough stock for ${cartItems[cartItemIndex].name}. Available: ${inventoryItem.stock + oldQuantity}`);
+                    event.target.value = oldQuantity;
+                    return;
+                }
+                inventoryItem.stock -= stockDifference; // Adjust inventory stock
+            }
+
+            cartItems[cartItemIndex].quantity = newQuantity;
+            cartItems[cartItemIndex].price = newPrice;
+
+            renderCartTable();
+            renderInventoryTable(); // Re-render inventory to show updated stock
+            updateTotals();
+            saveDataToLocalStorage(); // Save changes
+        }
+
+        function handleDeleteCartItem(event) {
+            const cartId = parseInt(event.target.dataset.cartId);
+            const itemToRemoveIndex = cartItems.findIndex(item => item.id === cartId);
+
+            if (itemToRemoveIndex !== -1) {
+                const itemToRemove = cartItems[itemToRemoveIndex];
+                const inventoryItem = inventory.find(inv => inv.id === itemToRemove.inventoryId);
+
+                if (inventoryItem) {
+                    inventoryItem.stock += itemToRemove.quantity; // Return stock to inventory
+                }
+
+                cartItems.splice(itemToRemoveIndex, 1);
+                renderCartTable();
+                renderInventoryTable(); // Re-render inventory to show updated stock
+                updateTotals();
+                saveDataToLocalStorage(); // Save changes
+            }
+        }
+
+        // --- Totals and Checkout Functions ---
+
+        function calculateTotals() {
+            const subtotal = cartItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+            const discountAmount = subtotal * (discountPercentage / 100);
+            const total = subtotal - discountAmount;
+            return { subtotal, discountAmount, total };
+        }
+
+        function updateTotals() {
+            const { subtotal, discountAmount, total } = calculateTotals();
+            subtotalDisplay.textContent = formatCurrency(subtotal);
+            discountAmountDisplay.textContent = `(-${formatCurrency(discountAmount)})`;
+            totalDisplay.textContent = formatCurrency(total);
+
+            if (selectedPaymentMethod === 'Cash') {
+                const tendered = parseFloat(amountTenderedInput.value);
+                if (!isNaN(tendered) && tendered >= total) {
+                    changeDue = tendered - total;
+                    changeDueDisplay.textContent = formatCurrency(changeDue);
+                } else {
+                    changeDue = 0;
+                    changeDueDisplay.textContent = formatCurrency(0);
+                }
+            } else {
+                changeDue = 0;
+                changeDueDisplay.textContent = formatCurrency(0);
+            }
+        }
+
+        function handleDiscountChange(event) {
+            discountPercentage = parseFloat(event.target.value);
+            if (isNaN(discountPercentage) || discountPercentage < 0) {
+                discountPercentage = 0;
+                event.target.value = 0;
+            } else if (discountPercentage > 100) {
+                discountPercentage = 100;
+                event.target.value = 100;
+            }
+            updateTotals();
+            // No need to save to local storage immediately as this is only UI calculation
+        }
+
+        function handlePaymentMethodChange(event) {
+            selectedPaymentMethod = event.target.value;
+            if (selectedPaymentMethod === 'Cash') {
+                cashPaymentDetails.classList.remove('hidden');
+                amountTenderedInput.value = '';
+                updateTotals();
+            } else {
+                cashPaymentDetails.classList.add('hidden');
+                amountTenderedInput.value = '';
+                updateTotals();
+            }
+            // No need to save to local storage
+        }
+
+        function handleAmountTenderedChange(event) {
+            amountTendered = parseFloat(event.target.value);
+            updateTotals();
+            // No need to save to local storage
+        }
+
+        function handleCheckout() {
+            if (cartItems.length === 0) {
+                showAlert('Cart is empty. Please add items before checking out.');
+                return;
+            }
+            const buyerName = buyerNameInput.value.trim();
+            if (!buyerName) {
+                showAlert('Please enter the buyer\'s name.');
+                return;
+            }
+
+            const { subtotal, discountAmount, total } = calculateTotals();
+
+            if (selectedPaymentMethod === 'Cash') {
+                if (isNaN(amountTendered) || amountTendered < total) {
+                    showAlert(`Amount tendered (${formatCurrency(amountTendered)}) is less than total (${formatCurrency(total)}). Please enter a sufficient amount.`);
+                    return;
+                }
+            }
+
+            const now = new Date();
+            const dateTime = now.toLocaleString('en-KE', {
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit',
+            });
+
+            const itemsForReceipt = [...cartItems];
+
+            receiptDateTime.textContent = `Date: ${dateTime}`;
+            receiptBuyerName.textContent = `Buyer: ${buyerName}`;
+            receiptSubtotal.textContent = formatCurrency(subtotal);
+            receiptDiscountPercentage.textContent = discountPercentage;
+            receiptDiscountAmount.textContent = `-${formatCurrency(discountAmount)}`;
+            receiptTotal.textContent = formatCurrency(total);
+            receiptPaymentMethod.textContent = selectedPaymentMethod;
+
+            if (selectedPaymentMethod === 'Cash') {
+                receiptChangeDueContainer.classList.remove('hidden');
+                receiptChangeDue.textContent = formatCurrency(changeDue);
+            } else {
+                receiptChangeDueContainer.classList.add('hidden');
+            }
+
+            receiptItemsDiv.innerHTML = '';
+            itemsForReceipt.forEach(item => {
+                const itemDiv = document.createElement('div');
+                itemDiv.className = 'flex justify-between text-sm mb-1';
+                itemDiv.innerHTML = `
+                    <span>${item.name} (x${item.quantity})</span>
+                    <span>${formatCurrency(item.price)} each</span>
+                    <span class="font-medium">${formatCurrency(item.price * item.quantity)}</span>
+                `;
+                receiptItemsDiv.appendChild(itemDiv);
+            });
+
+            receiptModal.classList.remove('hidden');
+
+            // Reset POS state after checkout
+            cartItems = [];
+            buyerNameInput.value = '';
+            discountInput.value = 0;
+            discountPercentage = 0;
+            amountTenderedInput.value = '';
+            amountTendered = 0;
+            changeDue = 0;
+            document.querySelector('input[name="paymentMethod"][value="Cash"]').checked = true;
+            selectedPaymentMethod = 'Cash';
+            cashPaymentDetails.classList.remove('hidden');
+            updateTotals();
+            renderCartTable();
+            nextCartItemId = 1;
+            saveDataToLocalStorage(); // Save changes after checkout
+        }
+
+        function handleCloseReceipt() {
+            receiptModal.classList.add('hidden');
+        }
+
+        function handlePrintReceipt() {
+            receiptModal.classList.remove('hidden'); // Ensure modal is visible
+            setTimeout(() => {
+                window.print();
+            }, 100); // Small delay to ensure rendering
+        }
+
+        // --- Event Listeners ---
+        document.addEventListener('DOMContentLoaded', () => {
+            loadDataFromLocalStorage(); // Load data when the page loads
+
+            // Inventory Management
+            addProductToInventoryBtn.addEventListener('click', handleAddProductToInventory);
+
+            // Add Item to Cart
+            searchItemInput.addEventListener('input', filterInventory);
+            itemQuantityToAddInput.addEventListener('input', () => {
+                const quantity = parseInt(itemQuantityToAddInput.value);
+                if (selectedItem && (isNaN(quantity) || quantity <= 0 || quantity > selectedItem.stock)) {
+                    addItemToCartBtn.disabled = true;
+                } else {
+                    addItemToCartBtn.disabled = false;
+                }
+            });
+            addItemToCartBtn.addEventListener('click', handleAddItemToCart);
+
+            // Totals and Checkout
+            discountInput.addEventListener('input', handleDiscountChange);
+            checkoutBtn.addEventListener('click', handleCheckout);
+
+            // Payment Methods
+            paymentMethodRadios.forEach(radio => {
+                radio.addEventListener('change', handlePaymentMethodChange);
+            });
+            amountTenderedInput.addEventListener('input', handleAmountTenderedChange);
+            cashPaymentDetails.classList.remove('hidden');
+
+            // Receipt Modal
+            closeReceiptBtn.addEventListener('click', handleCloseReceipt);
+            printReceiptBtn.addEventListener('click', handlePrintReceipt);
+
+            // Message Modal
+            closeMessageModalBtn.addEventListener('click', hideAlert);
+            messageModalOkBtn.addEventListener('click', hideAlert);
+        });
+    </script>
+</body>
+</html>
